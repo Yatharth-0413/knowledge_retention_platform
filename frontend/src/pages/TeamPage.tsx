@@ -1,8 +1,9 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { listDocuments, uploadDocument } from '../api/documents'
 import { addMember, getTeam } from '../api/teams'
 import type { KnowledgeDocument, TeamDetail } from '../api/types'
+import { ContributionActivity } from '../components/ContributionActivity'
 import { DependencyAnalyzer } from '../components/DependencyAnalyzer'
 import { TeamChat } from '../components/TeamChat'
 import { TeamDashboardStats } from '../components/TeamDashboardStats'
@@ -64,6 +65,18 @@ export function TeamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId])
 
+  // Documents are processed (topic extraction + embedding) asynchronously after upload.
+  // Poll while any are still "processing" so the page doesn't sit on a stale status.
+  useEffect(() => {
+    if (!documents.some((d) => d.status === 'processing')) return
+    const timeout = setTimeout(async () => {
+      await refreshDocuments()
+      setKnowledgeRefreshKey((k) => k + 1)
+    }, 2500)
+    return () => clearTimeout(timeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documents])
+
   async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -114,7 +127,15 @@ export function TeamPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold text-gray-900">{team.name}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-gray-900">{team.name}</h1>
+        <Link
+          to={`/teams/${team.id}/graph`}
+          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+        >
+          View knowledge graph →
+        </Link>
+      </div>
 
       <TeamDashboardStats teamId={team.id} key={`stats-${knowledgeRefreshKey}`} />
 
@@ -132,7 +153,9 @@ export function TeamPage() {
             {team.members.map((member) => (
               <li key={member.id} className="flex flex-col px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">{member.name}</p>
+                  <Link to={`/people/${member.id}`} className="font-medium text-gray-900 hover:text-indigo-600 hover:underline">
+                    {member.name}
+                  </Link>
                   <p className="text-sm text-gray-500">
                     {member.designation ?? 'Member'} · {member.email}
                     {member.phone_number ? ` · ${member.phone_number}` : ''}
@@ -194,6 +217,14 @@ export function TeamPage() {
           distribution, not the person.
         </p>
         <DependencyAnalyzer teamId={team.id} key={`dependency-${knowledgeRefreshKey}`} />
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-lg font-medium text-gray-900">Knowledge contribution activity</h2>
+        <p className="mb-3 text-sm text-gray-500">
+          Documents uploaded and topics contributed per person. This tracks documented contribution, not performance.
+        </p>
+        <ContributionActivity teamId={team.id} key={`contributions-${knowledgeRefreshKey}`} />
       </section>
 
       {isOwnerManager && (

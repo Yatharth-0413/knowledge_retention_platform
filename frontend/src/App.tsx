@@ -2,7 +2,9 @@ import { useEffect } from 'react'
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { DashboardPage } from './pages/DashboardPage'
+import { GraphPage } from './pages/GraphPage'
 import { LoginPage } from './pages/LoginPage'
+import { PersonPage } from './pages/PersonPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { TeamPage } from './pages/TeamPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
@@ -36,6 +38,26 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <TeamPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teams/:teamId/graph"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <GraphPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people/:userId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <PersonPage />
               </Layout>
             </ProtectedRoute>
           }

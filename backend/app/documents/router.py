@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import get_current_user
 from app.config import settings
@@ -63,7 +64,10 @@ async def upload_document(
     db.refresh(document)
 
     try:
-        text = extract_text(file_bytes, file_type)
+        # File parsing, topic extraction (Ollama) and embedding (sentence-transformers)
+        # are all synchronous, potentially slow calls. Run them in FastAPI's threadpool
+        # so a slow upload doesn't block the single event loop for every other request.
+        text = await run_in_threadpool(extract_text, file_bytes, file_type)
         chunks = [
             DocumentChunk(document_id=document.id, chunk_index=index, content=content)
             for index, content in enumerate(chunk_text(text))
@@ -71,8 +75,8 @@ async def upload_document(
         db.add_all(chunks)
         document.status = DocumentStatus.READY
         db.flush()
-        process_document_topics(db, document, text)
-        embed_document_chunks(chunks)
+        await run_in_threadpool(process_document_topics, db, document, text)
+        await run_in_threadpool(embed_document_chunks, chunks)
     except ExtractionError as exc:
         document.status = DocumentStatus.FAILED
         document.error_message = str(exc)

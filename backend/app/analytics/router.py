@@ -1,10 +1,11 @@
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from app.analytics.schemas import (
+    ContributionActivityOut,
     CoverageBuckets,
     DependencyContributor,
     DependencyTopicOut,
@@ -115,3 +116,46 @@ def get_dependency_analysis(
 
     results.sort(key=lambda r: r.contributors[0].share if r.contributors else 0, reverse=True)
     return results
+
+
+@router.get("/teams/{team_id}/contributions", response_model=list[ContributionActivityOut])
+def get_contribution_activity(
+    team_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> list[ContributionActivityOut]:
+    """Knowledge Contribution Activity (README section 16) — documents uploaded and
+    topics contributed per person, without treating it as employee performance."""
+    team = require_team_access(team_id, current_user, db)
+    user_ids = team_user_ids(team)
+
+    doc_rows = (
+        db.query(
+            User.id,
+            User.name,
+            func.count(Document.id).label("document_count"),
+            func.max(Document.created_at).label("last_activity"),
+        )
+        .outerjoin(Document, and_(Document.uploaded_by_id == User.id, Document.team_id == team_id))
+        .filter(User.id.in_(user_ids))
+        .group_by(User.id, User.name)
+        .all()
+    )
+
+    topic_counts = dict(
+        db.query(KnowledgeEvidence.user_id, func.count(func.distinct(KnowledgeEvidence.topic_id)))
+        .filter(KnowledgeEvidence.user_id.in_(user_ids))
+        .group_by(KnowledgeEvidence.user_id)
+        .all()
+    )
+
+    items = [
+        ContributionActivityOut(
+            user_id=user_id,
+            name=name,
+            document_count=document_count,
+            topic_count=topic_counts.get(user_id, 0),
+            last_activity=last_activity.isoformat() if last_activity else None,
+        )
+        for user_id, name, document_count, last_activity in doc_rows
+    ]
+    items.sort(key=lambda i: i.document_count, reverse=True)
+    return items

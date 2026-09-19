@@ -9,7 +9,7 @@ import httpx
 
 from app.config import settings
 
-_TIMEOUT = httpx.Timeout(30.0, connect=3.0)
+_TIMEOUT = httpx.Timeout(90.0, connect=3.0)
 
 
 def ollama_generate(prompt: str, *, json_mode: bool = False) -> str | None:
