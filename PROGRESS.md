@@ -12,6 +12,13 @@ Last updated: 2026-09-20
 ## Currently in progress
 Nothing — MVP is complete, the polish pass is done, and a full manual run-through of the README's demo script (section 24) succeeded with real AI (Ollama `llama3.2` pulled and warm, not the fallback path).
 
+## Frontend redesign (2026-09-20, branch `frontend-redesign-company-style`)
+Restyled the frontend to match the company's internal-website design language (from `Compamy_sample_internal_website_common_design.pdf`): bold black headings, uppercase gray section/field labels, thin 1px borders instead of card shadows, a divided stat-strip for dashboard numbers, pill-shaped status/concentration badges, and a red accent (`#c8102e`) for primary buttons, links, focus rings and progress bars (replacing the old indigo). Added a footer bar and a brand mark (red square + wordmark) in the header, matching the PDF's layout pattern.
+
+Styling/layout only — no backend, API, or business-logic changes. Shared the new look via Tailwind `@layer components` classes in `frontend/src/index.css` (`knp-btn-primary`, `knp-card`, `knp-stat-strip`, `knp-badge-*`, etc.) reused across all pages/components instead of one-off inline classes.
+
+Verified: `npm run build` (tsc + vite) passes clean. Manually exercised the real app in Chrome against live `postgres`+`backend` containers — register, login, create team, add member, and the team dashboard all render correctly and the stat strip updates live after adding a member. Ollama/document upload/chat were not re-verified visually in this pass (no functional code touched there), but nothing in those components changed beyond swapping class names.
+
 ## Done (MVP checklist, section 18)
 
 | # | Item | Status | Notes |
