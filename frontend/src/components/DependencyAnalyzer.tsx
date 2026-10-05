@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getTeamDependency } from '../api/analytics'
 import type { DependencyTopic } from '../api/types'
 
@@ -42,9 +43,9 @@ export function DependencyAnalyzer({ teamId }: { teamId: number }) {
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
             {topic.contributors.map((c) => (
-              <span key={c.user_id}>
+              <Link key={c.user_id} to={`/people/${c.user_id}`} className="hover:text-indigo-600 hover:underline">
                 {c.name} — {Math.round(c.share * 100)}%
-              </span>
+              </Link>
             ))}
           </div>
         </li>

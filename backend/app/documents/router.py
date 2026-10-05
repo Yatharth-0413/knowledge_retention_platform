@@ -1,18 +1,17 @@
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
-from collections.abc import Callable
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import get_current_user
 from app.config import settings
 from app.database import get_db
 from app.documents.chunking import chunk_text
 from app.documents.email_parser import EmailParseError, parse_outlook_file
-from app.documents.extraction import ExtractionError, extract_text
+from app.documents.extraction import extract_text
 from app.documents.models import Document, DocumentChunk, DocumentStatus, DocumentType
 from app.documents.schemas import DocumentDetailOut, DocumentOut, EmailAttachmentOut, EmailIngestOut
 from app.knowledge.service import embed_document_chunks, process_document_topics
@@ -38,15 +37,17 @@ def _save_file(team_id: int, file_bytes: bytes, extension: str) -> Path:
     return stored_path
 
 
-def _run_pipeline(db: Session, document: Document, get_text: Callable[[], str]) -> int:
+async def _run_pipeline(db: Session, document: Document, get_text: Callable[[], str]) -> int:
     """Extract -> chunk -> topics -> embeddings for one document; returns the chunk count.
 
     Runs inside a savepoint so any failure (not just ExtractionError) marks the
     document FAILED instead of leaving it stuck in PROCESSING with a half-written session.
+    Parsing, topic extraction (Ollama) and embedding are slow synchronous calls, so they run
+    in the threadpool to keep the event loop free for other requests.
     """
     try:
         with db.begin_nested():
-            text = get_text()
+            text = await run_in_threadpool(get_text)
             chunks = [
                 DocumentChunk(document_id=document.id, chunk_index=index, content=content)
                 for index, content in enumerate(chunk_text(text))
@@ -54,8 +55,8 @@ def _run_pipeline(db: Session, document: Document, get_text: Callable[[], str]) 
             db.add_all(chunks)
             document.status = DocumentStatus.READY
             db.flush()
-            process_document_topics(db, document, text)
-            embed_document_chunks(chunks)
+            await run_in_threadpool(process_document_topics, db, document, text)
+            await run_in_threadpool(embed_document_chunks, chunks)
         return len(chunks)
     except Exception as exc:  # noqa: BLE001 - any pipeline failure is recorded on the document
         document.status = DocumentStatus.FAILED
@@ -115,7 +116,7 @@ async def upload_document(
     db.commit()
     db.refresh(document)
 
-    _run_pipeline(db, document, lambda: extract_text(file_bytes, file_type))
+    await _run_pipeline(db, document, lambda: extract_text(file_bytes, file_type))
 
     db.commit()
     db.refresh(document)
@@ -151,7 +152,7 @@ async def _ingest_email(
     db.add(email_document)
     db.commit()
     db.refresh(email_document)
-    body_chunk_count = _run_pipeline(db, email_document, lambda: email_text)
+    body_chunk_count = await _run_pipeline(db, email_document, lambda: email_text)
     db.commit()
 
     processed: list[EmailAttachmentOut] = []
@@ -169,7 +170,7 @@ async def _ingest_email(
         db.add(child)
         db.commit()
         db.refresh(child)
-        _run_pipeline(db, child, lambda: extract_text(att_bytes, att_type))
+        await _run_pipeline(db, child, lambda: extract_text(att_bytes, att_type))
         db.commit()
 
         if child.status == DocumentStatus.READY:

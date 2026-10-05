@@ -81,6 +81,8 @@ export interface UserTopicEvidence {
   document_count: number
 }
 
+export type UserProfile = CurrentUser
+
 export interface CoverageBuckets {
   well_covered: number
   moderately_covered: number
@@ -115,6 +117,34 @@ export interface DependencyTopic {
   topic_name: string
   contributors: DependencyContributor[]
   concentration: Concentration
+}
+
+export interface ContributionActivity {
+  user_id: number
+  name: string
+  document_count: number
+  topic_count: number
+  last_activity: string | null
+}
+
+export type GraphNodeType = 'person' | 'topic' | 'document'
+
+export interface GraphNode {
+  id: string
+  type: GraphNodeType
+  label: string
+  subtitle: string | null
+}
+
+export interface GraphEdge {
+  source: string
+  target: string
+  weight: number
+}
+
+export interface TeamGraph {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
 }
 
 export interface ChatSource {

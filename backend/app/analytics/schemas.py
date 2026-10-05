@@ -33,3 +33,11 @@ class DependencyTopicOut(BaseModel):
     topic_name: str
     contributors: list[DependencyContributor]
     concentration: str
+
+
+class ContributionActivityOut(BaseModel):
+    user_id: int
+    name: str
+    document_count: int
+    topic_count: int
+    last_activity: str | None = None

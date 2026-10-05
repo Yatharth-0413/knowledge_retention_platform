@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getTopic, listTeamTopics } from '../api/knowledge'
 import type { TopicDetail, TopicSummary } from '../api/types'
 
@@ -86,10 +87,10 @@ export function TopicExplorer({ teamId }: { teamId: number }) {
                   {detail.people.map((person) => (
                     <li key={person.user_id}>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-900">
+                        <Link to={`/people/${person.user_id}`} className="text-gray-900 hover:text-indigo-600 hover:underline">
                           {person.name}
                           {person.designation ? <span className="text-gray-400"> · {person.designation}</span> : null}
-                        </span>
+                        </Link>
                         <span className="font-medium text-gray-700">{person.score}%</span>
                       </div>
                       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100">

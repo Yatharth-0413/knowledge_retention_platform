@@ -10,6 +10,7 @@ from app.chat.router import router as chat_router
 from app.config import settings
 from app.database import Base, engine
 from app.documents.router import router as documents_router
+from app.graph.router import router as graph_router
 from app.knowledge.router import router as knowledge_router
 from app.teams.router import router as teams_router
 from app.users.router import router as users_router
@@ -43,3 +44,4 @@ app.include_router(documents_router)
 app.include_router(knowledge_router)
 app.include_router(analytics_router)
 app.include_router(chat_router)
+app.include_router(graph_router)
