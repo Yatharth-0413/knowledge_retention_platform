@@ -9,7 +9,7 @@ import base64
 import io
 import re
 from datetime import datetime
-from email.utils import parseaddr
+from email.utils import parseaddr, parsedate_to_datetime
 
 from bs4 import BeautifulSoup
 
@@ -158,5 +158,9 @@ def _coerce_date(value) -> datetime | None:
         try:
             return datetime.fromisoformat(value)
         except ValueError:
+            pass
+        try:  # RFC 2822, as in a raw "Date:" header (.msg often exposes it this way)
+            return parsedate_to_datetime(value)
+        except (TypeError, ValueError):
             return None
     return None

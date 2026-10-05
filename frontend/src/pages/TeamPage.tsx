@@ -11,9 +11,9 @@ import { TopicExplorer } from '../components/TopicExplorer'
 import { useAuthStore } from '../store/authStore'
 
 const STATUS_STYLES: Record<KnowledgeDocument['status'], string> = {
-  processing: 'bg-amber-100 text-amber-800',
-  ready: 'bg-green-100 text-green-800',
-  failed: 'bg-red-100 text-red-800',
+  processing: 'knp-badge knp-badge-warning',
+  ready: 'knp-badge knp-badge-success',
+  failed: 'knp-badge knp-badge-danger',
 }
 
 export function TeamPage() {
@@ -120,19 +120,16 @@ export function TeamPage() {
     }
   }
 
-  if (loading) return <p className="text-gray-500">Loading…</p>
+  if (loading) return <p className="text-sm text-gray-500">Loading…</p>
   if (error || !team) return <p className="text-sm text-red-600">{error ?? 'Team not found.'}</p>
 
   const isOwnerManager = user?.role === 'manager' && user.id === team.manager_id
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">{team.name}</h1>
-        <Link
-          to={`/teams/${team.id}/graph`}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <h1 className="knp-page-title">{team.name}</h1>
+        <Link to={`/teams/${team.id}/graph`} className="knp-btn-secondary">
           View knowledge graph →
         </Link>
       </div>
@@ -140,20 +137,20 @@ export function TeamPage() {
       <TeamDashboardStats teamId={team.id} key={`stats-${knowledgeRefreshKey}`} />
 
       <section>
-        <h2 className="mb-2 text-lg font-medium text-gray-900">AI knowledge assistant</h2>
+        <h2 className="mb-2 knp-section-title">AI knowledge assistant</h2>
         <TeamChat teamId={team.id} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-lg font-medium text-gray-900">Members</h2>
+        <h2 className="mb-2 knp-section-title">Members</h2>
         {team.members.length === 0 ? (
           <p className="text-sm text-gray-500">No members yet.</p>
         ) : (
-          <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+          <ul className="knp-list">
             {team.members.map((member) => (
               <li key={member.id} className="flex flex-col px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <Link to={`/people/${member.id}`} className="font-medium text-gray-900 hover:text-indigo-600 hover:underline">
+                  <Link to={`/people/${member.id}`} className="knp-link font-medium">
                     {member.name}
                   </Link>
                   <p className="text-sm text-gray-500">
@@ -169,8 +166,8 @@ export function TeamPage() {
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900">Documents</h2>
-          <label className="cursor-pointer rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <h2 className="knp-section-title">Documents</h2>
+          <label className="knp-btn-primary cursor-pointer">
             {uploading ? 'Uploading…' : 'Upload document'}
             <input
               type="file"
@@ -187,7 +184,7 @@ export function TeamPage() {
         ) : documents.length === 0 ? (
           <p className="text-sm text-gray-500">No documents uploaded yet.</p>
         ) : (
-          <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+          <ul className="knp-list">
             {documents.map((doc) => (
               <li key={doc.id} className="flex items-center justify-between px-4 py-3">
                 <div>
@@ -196,9 +193,7 @@ export function TeamPage() {
                     {doc.file_type.toUpperCase()} · {new Date(doc.created_at).toLocaleString()}
                   </p>
                 </div>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[doc.status]}`}>
-                  {doc.status}
-                </span>
+                <span className={STATUS_STYLES[doc.status]}>{doc.status}</span>
               </li>
             ))}
           </ul>
@@ -206,12 +201,12 @@ export function TeamPage() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-lg font-medium text-gray-900">Topic explorer</h2>
+        <h2 className="mb-2 knp-section-title">Topic explorer</h2>
         <TopicExplorer teamId={team.id} key={`topics-${knowledgeRefreshKey}`} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-lg font-medium text-gray-900">Dependency analyzer</h2>
+        <h2 className="mb-1 knp-section-title">Dependency analyzer</h2>
         <p className="mb-3 text-sm text-gray-500">
           Topics where documented knowledge is concentrated around one person. This reflects team knowledge
           distribution, not the person.
@@ -220,7 +215,7 @@ export function TeamPage() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-lg font-medium text-gray-900">Knowledge contribution activity</h2>
+        <h2 className="mb-1 knp-section-title">Knowledge contribution activity</h2>
         <p className="mb-3 text-sm text-gray-500">
           Documents uploaded and topics contributed per person. This tracks documented contribution, not performance.
         </p>
@@ -229,50 +224,51 @@ export function TeamPage() {
 
       {isOwnerManager && (
         <section>
-          <h2 className="mb-2 text-lg font-medium text-gray-900">Add a member</h2>
-          <form onSubmit={handleAddMember} className="grid max-w-lg gap-3 rounded-lg border border-gray-200 bg-white p-4">
-            <input
-              placeholder="Name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
-            <input
-              type="password"
-              placeholder="Temporary password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
-            <input
-              placeholder="Designation"
-              value={designation}
-              onChange={(e) => setDesignation(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
-            <input
-              placeholder="Phone number"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
+          <h2 className="mb-2 knp-section-title">Add a member</h2>
+          <form onSubmit={handleAddMember} className="grid max-w-lg gap-3 knp-card p-4">
+            <div>
+              <label className="knp-label">Name</label>
+              <input required value={name} onChange={(e) => setName(e.target.value)} className="knp-input" />
+            </div>
+            <div>
+              <label className="knp-label">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="knp-input"
+              />
+            </div>
+            <div>
+              <label className="knp-label">Temporary password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="knp-input"
+              />
+            </div>
+            <div>
+              <label className="knp-label">Designation</label>
+              <input
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                className="knp-input"
+              />
+            </div>
+            <div>
+              <label className="knp-label">Phone number</label>
+              <input
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="knp-input"
+              />
+            </div>
             {addError && <p className="text-sm text-red-600">{addError}</p>}
-            <button
-              type="submit"
-              disabled={adding}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
+            <button type="submit" disabled={adding} className="knp-btn-primary">
               {adding ? 'Adding…' : 'Add member'}
             </button>
           </form>

@@ -45,6 +45,24 @@ export interface KnowledgeDocument {
   created_at: string
 }
 
+export interface EmailAttachmentResult {
+  filename: string
+  status: 'processed' | 'failed' | 'skipped'
+  document_id: number | null
+  detail: string | null
+}
+
+/** Response when the uploaded file was a .msg/.eml email. */
+export interface EmailIngestResult {
+  document: KnowledgeDocument
+  subject: string
+  sender_email: string
+  sender_name: string
+  body_chunk_count: number
+  attachments_processed: EmailAttachmentResult[]
+  attachments_skipped: EmailAttachmentResult[]
+}
+
 export interface TopicSummary {
   id: number
   name: string

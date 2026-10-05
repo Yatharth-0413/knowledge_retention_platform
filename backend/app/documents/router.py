@@ -3,6 +3,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
@@ -131,12 +132,12 @@ async def _ingest_email(
     try:
         parsed = await run_in_threadpool(parse_outlook_file, file_bytes, filename)
     except EmailParseError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # Credit the email to its sender when they belong to this team; otherwise to the uploader.
     owner_id = uploader.id
     if parsed["sender_email"]:
-        sender = db.query(User).filter(User.email == parsed["sender_email"], User.id.in_(team_user_ids(team))).first()
+        sender = db.query(User).filter(func.lower(User.email) == parsed["sender_email"], User.id.in_(team_user_ids(team))).first()
         if sender is not None:
             owner_id = sender.id
 

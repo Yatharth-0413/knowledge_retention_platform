@@ -32,11 +32,11 @@ export function ContributionActivity({ teamId }: { teamId: number }) {
   }
 
   return (
-    <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+    <ul className="knp-list">
       {items.map((item) => (
         <li key={item.user_id} className="px-4 py-3">
           <div className="mb-1 flex items-center justify-between text-sm">
-            <Link to={`/people/${item.user_id}`} className="font-medium text-gray-900 hover:text-indigo-600 hover:underline">
+            <Link to={`/people/${item.user_id}`} className="knp-link font-medium">
               {item.name}
             </Link>
             <span className="text-gray-600">
@@ -44,11 +44,8 @@ export function ContributionActivity({ teamId }: { teamId: number }) {
               {item.topic_count === 1 ? 'topic' : 'topics'}
             </span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="h-full rounded-full bg-indigo-500"
-              style={{ width: `${(item.document_count / maxDocuments) * 100}%` }}
-            />
+          <div className="knp-bar-track">
+            <div className="knp-bar-fill" style={{ width: `${(item.document_count / maxDocuments) * 100}%` }} />
           </div>
           {item.last_activity && (
             <p className="mt-1 text-xs text-gray-400">Last activity {new Date(item.last_activity).toLocaleDateString()}</p>

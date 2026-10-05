@@ -19,7 +19,7 @@ const COLUMN_X: Record<GraphNodeType, number> = { person: 40, topic: 380, docume
 const ROW_HEIGHT = 76
 
 const TYPE_STYLES: Record<GraphNodeType, { border: string; bg: string; text: string }> = {
-  person: { border: 'border-indigo-400', bg: 'bg-indigo-50', text: 'text-indigo-900' },
+  person: { border: 'border-red-400', bg: 'bg-red-50', text: 'text-red-900' },
   topic: { border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-900' },
   document: { border: 'border-emerald-400', bg: 'bg-emerald-50', text: 'text-emerald-900' },
 }
@@ -109,10 +109,10 @@ export function GraphPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Knowledge graph</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="knp-page-title">Knowledge graph</h1>
+          <p className="knp-page-subtitle">
             <span className="mr-3">
-              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-indigo-500" />
+              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-red-500" />
               People
             </span>
             <span className="mr-3">
@@ -129,7 +129,7 @@ export function GraphPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search the graph…"
-          className="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+          className="knp-input w-64"
         />
       </div>
 
@@ -137,7 +137,7 @@ export function GraphPage() {
         <p className="text-sm text-gray-500">No documented knowledge yet — upload documents to build the graph.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-          <div className="h-[560px] overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="h-[560px] overflow-hidden knp-card">
             <ReactFlowProvider>
               <ReactFlow
                 nodes={nodes}
@@ -149,19 +149,19 @@ export function GraphPage() {
               >
                 <Background gap={16} color="#e5e7eb" />
                 <Controls />
-                <MiniMap pannable zoomable nodeColor={() => '#c7d2fe'} />
+                <MiniMap pannable zoomable nodeColor={() => '#fecaca'} />
               </ReactFlow>
             </ReactFlowProvider>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="knp-card p-4">
             {selected ? (
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{selected.type}</p>
+                <p className="knp-section-title">{selected.type}</p>
                 <p className="font-medium text-gray-900">{selected.label}</p>
                 {selected.subtitle && <p className="text-sm text-gray-500">{selected.subtitle}</p>}
                 {selectedPersonId !== null && (
-                  <Link to={`/people/${selectedPersonId}`} className="inline-block text-sm text-indigo-600 hover:underline">
+                  <Link to={`/people/${selectedPersonId}`} className="knp-link inline-block text-sm">
                     View profile →
                   </Link>
                 )}
