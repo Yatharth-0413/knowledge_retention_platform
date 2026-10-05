@@ -75,7 +75,7 @@ export function TeamPage() {
       await refreshDocuments()
       setKnowledgeRefreshKey((k) => k + 1)
     } catch {
-      setUploadError('Could not upload document. Allowed types: pdf, docx, xlsx, csv.')
+      setUploadError('Could not upload document. Allowed types: pdf, docx, xlsx, csv, msg, eml.')
     } finally {
       setUploading(false)
     }
@@ -151,7 +151,7 @@ export function TeamPage() {
             {uploading ? 'Uploading…' : 'Upload document'}
             <input
               type="file"
-              accept=".pdf,.docx,.xlsx,.csv"
+              accept=".pdf,.docx,.xlsx,.csv,.msg,.eml"
               onChange={handleUpload}
               disabled={uploading}
               className="hidden"

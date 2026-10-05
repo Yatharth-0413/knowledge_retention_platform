@@ -31,7 +31,7 @@ export interface TeamDetail extends Team {
   members: TeamMember[]
 }
 
-export type DocumentFileType = 'pdf' | 'docx' | 'xlsx' | 'csv'
+export type DocumentFileType = 'pdf' | 'docx' | 'xlsx' | 'csv' | 'email'
 export type DocumentStatus = 'processing' | 'ready' | 'failed'
 
 export interface KnowledgeDocument {
