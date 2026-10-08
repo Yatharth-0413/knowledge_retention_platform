@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 
 from app.config import settings
 
@@ -13,7 +14,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    return pwd_context.verify(plain_password, password_hash)
+    try:
+        return pwd_context.verify(plain_password, password_hash)
+    except UnknownHashError:
+        # A password_hash that isn't a recognizable hash at all (e.g. corrupted
+        # data) must fail the login, not crash the request with a 500.
+        return False
 
 
 def create_access_token(subject: str, extra_claims: dict | None = None) -> str:

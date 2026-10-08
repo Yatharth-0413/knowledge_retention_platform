@@ -58,7 +58,7 @@ const nodeTypes = { card: GraphNodeCard }
  * in other people who happen to share one of those topics (a plain 2-hop BFS would, since
  * person<->topic edges are traversable both ways). Mirrors the focus example in the
  * product's own bug-report doc: person -> their topic(s) -> those topics' document(s). */
-function computeFocusSet(focusNode: ApiGraphNode, edges: ApiGraphEdge[]): Set<string> {
+export function computeFocusSet(focusNode: ApiGraphNode, edges: ApiGraphEdge[]): Set<string> {
   const ids = new Set<string>([focusNode.id])
 
   if (focusNode.type === 'person') {

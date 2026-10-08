@@ -20,6 +20,48 @@ has not been pushed to `origin/frontend-redesign-company-style` yet** — the sa
 auto-mode classifier blocks `git push` even on explicit user request; run it manually:
 `git push origin frontend-redesign-company-style`. The work below is also uncommitted as of this update.
 
+## Test suite added (2026-10-08)
+
+First automated tests in this repo — previously everything was verified by manual in-browser testing
+only (still the right call for UI/UX work, but the core attribution/scoring/leak-fix logic from the
+post-MVP pass below now has regression coverage too).
+
+- **Backend** (`backend/tests/`, pytest): `requirements-dev.txt` (pytest, pytest-cov, freezegun),
+  `pytest.ini`. `tests/unit/` — 9 files, 79 tests, no DB/Docker dependency (pure functions + mocked
+  `Session`/`monkeypatch`'d Ollama/embeddings): `test_security.py`, `test_teams_access.py`,
+  `test_users_access.py`, `test_person_attribution.py`, `test_extraction_rows.py`,
+  `test_topic_extraction.py`, `test_scoring.py`, `test_knowledge_service_dedup.py`,
+  `test_chat_matching.py`. `tests/integration/` — 2 files, 6 tests, against a real disposable
+  `knowledge_retention_test` Postgres/pgvector database (own `tests/integration/conftest.py`, separate
+  from the dev DB) with a real FastAPI `TestClient`, Ollama/embeddings monkeypatched out for speed:
+  `test_person_attribution_pipeline.py` (uploads a roster CSV through the real API, asserts the P0 fix —
+  knowledge credited to the named person, not the uploader, and the chat endpoint answers "What does
+  `<name>` know?" correctly for *both* people) and `test_cross_team_isolation.py` (a manager managing two
+  teams — asserts Team B's dashboard/topics/contributions never leak Team A's evidence, the exact bug
+  class found and fixed in Phase 1 below). Run with:
+  `docker compose exec backend pip install -r requirements-dev.txt` once, then
+  `docker compose exec backend pytest` (both suites) or `pytest tests/unit` / `pytest tests/integration`
+  separately. All 85 tests pass, confirmed stable across repeated runs.
+- **Frontend** (`frontend/`, vitest): `vitest.config.ts` — **deliberately a separate file from
+  `vite.config.ts`**, not merged in. Vitest pins its own nested copy of Vite; merging `test:` into
+  `vite.config.ts` and importing `defineConfig` from `vitest/config` there broke `tsc -b` with a
+  plugin-type mismatch between that nested copy and the top-level `vite` used by
+  `@vitejs/plugin-react`/`@tailwindcss/vite`. Keeping them separate (Vitest auto-resolves
+  `vitest.config.ts` over `vite.config.ts`) avoids it entirely — if a future change ever needs to touch
+  `vite.config.ts`, don't re-merge the two without re-testing `npm run build`. One new test file,
+  `src/pages/GraphPage.test.ts` (4 tests), covering `computeFocusSet` (now exported) — the Phase 2
+  click-to-focus cascade logic, asserting the person-focus-doesn't-pull-in-other-contributors behavior
+  specifically. Run with `npm install` once, then `npm run test`.
+- **Found and fixed one real (if minor) bug while writing these tests**: `app/auth/security.py::
+  verify_password` raised `passlib.exc.UnknownHashError` (an unhandled 500) instead of returning `False`
+  when given a `password_hash` that isn't a parseable hash at all (e.g. corrupted DB data) — fixed to
+  fail closed. Caught by `test_security.py::test_verify_password_rejects_garbage_hash`, not by guessing.
+- **Not covered yet** (acknowledged gap, not silently skipped): the `recommendations/classification.py`
+  module from the Knowledge Recommendation System above is explicitly called out in its own section as
+  "two pure, independently-testable functions" — good unit-test candidates, just not written in this
+  pass. Document upload pipeline edge cases (malformed files, email parsing) and the analytics router's
+  remaining endpoints (`/dependency`) also have no dedicated tests yet.
+
 ## Knowledge Recommendation System (2026-10-08, branch `feature/recoomendation_model`)
 
 New feature, not part of the original hackathon spec — requested directly by the user: classify
