@@ -170,6 +170,53 @@ export interface DependencyTopic {
   concentration: Concentration
 }
 
+export type KnowledgeCategory = 'functional' | 'technical' | 'unclassified'
+export type TopicRecommendationCategory = 'functional' | 'technical' | 'mixed' | 'unclassified'
+
+export interface ExistingContributor {
+  user_id: number
+  name: string
+  designation: string | null
+  category: KnowledgeCategory
+  score: number
+}
+
+export interface GapCandidate {
+  user_id: number
+  name: string
+  designation: string | null
+  category: 'functional' | 'technical'
+}
+
+export interface TopicRecommendation {
+  topic_id: number
+  topic_name: string
+  category: TopicRecommendationCategory
+  existing_contributors: ExistingContributor[]
+  gap_candidates: GapCandidate[]
+}
+
+export interface CategorySummary {
+  category: 'functional' | 'technical'
+  member_count: number
+  topic_count: number
+  gap_member_count: number
+  gap_pair_count: number
+}
+
+export interface RecommendationsSummary {
+  functional: CategorySummary
+  technical: CategorySummary
+  unclassified_member_count: number
+  unclassified_topic_count: number
+}
+
+export interface TeamRecommendations {
+  team_id: number
+  topics: TopicRecommendation[]
+  summary: RecommendationsSummary
+}
+
 export interface ContributionActivity {
   user_id: number
   name: string

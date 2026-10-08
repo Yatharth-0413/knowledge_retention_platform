@@ -5,6 +5,7 @@ import { addMember, getTeam } from '../api/teams'
 import type { EmailIngestResult, KnowledgeDocument, TeamDetail } from '../api/types'
 import { ContributionActivity } from '../components/ContributionActivity'
 import { DependencyAnalyzer } from '../components/DependencyAnalyzer'
+import { KnowledgeRecommendations } from '../components/KnowledgeRecommendations'
 import { TeamChat } from '../components/TeamChat'
 import { TeamDashboardStats } from '../components/TeamDashboardStats'
 import { TopicExplorer } from '../components/TopicExplorer'
@@ -321,6 +322,15 @@ export function TeamPage() {
           Documents uploaded and topics contributed per person. This tracks documented contribution, not performance.
         </p>
         <ContributionActivity teamId={team.id} key={`contributions-${knowledgeRefreshKey}`} />
+      </section>
+
+      <section>
+        <h2 className="mb-1 knp-section-title">Knowledge recommendations</h2>
+        <p className="mb-3 text-sm text-gray-500">
+          Functional (business/process) vs technical knowledge, split by role, with who's still missing documented
+          evidence on each topic.
+        </p>
+        <KnowledgeRecommendations teamId={team.id} key={`recommendations-${knowledgeRefreshKey}`} />
       </section>
 
       {isOwnerManager && (

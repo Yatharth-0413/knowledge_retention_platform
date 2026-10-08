@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { DocumentTypeCount, FreshnessBreakdown, KnowledgeByMemberItem, KnowledgeByTopicItem } from '../api/types'
 
-const BRAND = '#c8102e'
-const BRAND_LIGHT = '#e8899a'
+export const BRAND = '#c8102e'
+export const BRAND_LIGHT = '#e8899a'
 const FRESHNESS_COLORS: Record<'New' | 'Medium' | 'Old', string> = {
   New: '#22c55e',
   Medium: '#f59e0b',
@@ -11,7 +11,7 @@ const FRESHNESS_COLORS: Record<'New' | 'Medium' | 'Old', string> = {
 }
 const TYPE_COLORS = ['#c8102e', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6']
 
-function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+export function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="knp-card p-4">
       <p className="knp-section-title mb-3">{title}</p>
