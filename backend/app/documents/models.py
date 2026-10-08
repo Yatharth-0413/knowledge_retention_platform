@@ -21,6 +21,7 @@ class DocumentType(str, enum.Enum):
     DOCX = "docx"
     XLSX = "xlsx"
     CSV = "csv"
+    EMAIL = "email"  # parsed .msg / .eml; attachments get their own document rows
 
 
 class Document(Base):
@@ -37,6 +38,8 @@ class Document(Base):
         Enum(DocumentStatus, name="document_status"), default=DocumentStatus.PROCESSING
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Set on attachment documents; points at the email document they came from.
+    parent_document_id: Mapped[int | None] = mapped_column(ForeignKey("documents.id"), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
