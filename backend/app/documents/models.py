@@ -21,6 +21,7 @@ class DocumentType(str, enum.Enum):
     DOCX = "docx"
     XLSX = "xlsx"
     CSV = "csv"
+    EMAIL = "email"  # parsed .msg / .eml; attachments get their own document rows
 
 
 class Document(Base):
@@ -37,6 +38,8 @@ class Document(Base):
         Enum(DocumentStatus, name="document_status"), default=DocumentStatus.PROCESSING
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Set on attachment documents; points at the email document they came from.
+    parent_document_id: Mapped[int | None] = mapped_column(ForeignKey("documents.id"), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -45,6 +48,11 @@ class Document(Base):
     chunks: Mapped[list["DocumentChunk"]] = relationship(
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan", order_by="DocumentChunk.chunk_index"
     )
+
+    @property
+    def uploaded_by_name(self) -> str:
+        # For emails this is the credited sender, not necessarily the uploader - see email_parser.py.
+        return self.uploaded_by.name
 
 
 class DocumentChunk(Base):

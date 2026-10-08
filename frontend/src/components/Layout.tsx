@@ -12,28 +12,42 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-white">
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link to="/" className="text-lg font-semibold text-gray-900">
-            Knowledge Retention Platform
-          </Link>
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2.5">
+              <span className="h-6 w-6 rounded-sm bg-[var(--color-brand)]" />
+              <span className="text-base font-bold tracking-tight text-gray-900">Knowledge Retention Platform</span>
+            </Link>
+            {user && (
+              <Link to="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                Teams
+              </Link>
+            )}
+          </div>
           {user && (
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-gray-600">
-                {user.name} <span className="text-gray-400">· {user.role}</span>
-              </span>
-              <button
-                onClick={handleLogout}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-100"
-              >
+            <div className="flex items-center gap-4">
+              <div className="text-right text-sm leading-tight">
+                <p className="font-medium text-gray-900">{user.name}</p>
+                <p className="text-xs capitalize text-gray-500">{user.role}</p>
+              </div>
+              <button onClick={handleLogout} className="knp-btn-secondary py-1.5 text-xs">
                 Log out
               </button>
             </div>
           )}
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">{children}</main>
+
+      <footer className="border-t border-gray-200">
+        <div className="mx-auto flex max-w-5xl flex-col gap-1 px-6 py-4 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+          <span>© Knowledge Retention Platform · Hackathon MVP</span>
+          <span>Documented knowledge evidence, not employee competence.</span>
+        </div>
+      </footer>
     </div>
   )
 }

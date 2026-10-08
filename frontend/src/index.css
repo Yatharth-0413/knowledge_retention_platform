@@ -1,10 +1,103 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+
+  --color-brand: #c8102e;
+  --color-brand-dark: #a10d25;
+  --color-ink: #111111;
+  --color-ink-muted: #6b7280;
+  --color-border: #e5e7eb;
 }
 
 body {
   margin: 0;
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  background-color: #ffffff;
+  color: var(--color-ink);
+}
+
+@layer components {
+  /* Buttons */
+  .knp-btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-dark)] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .knp-btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Form fields */
+  .knp-label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500;
+  }
+  .knp-input {
+    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[var(--color-brand)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)];
+  }
+
+  /* Surfaces */
+  .knp-card {
+    @apply rounded-md border border-gray-200 bg-white;
+  }
+  .knp-list {
+    @apply divide-y divide-gray-200 rounded-md border border-gray-200 bg-white;
+  }
+
+  /* Page header (title + subtitle + action) */
+  .knp-page-title {
+    @apply text-3xl font-bold tracking-tight text-gray-900;
+  }
+  .knp-page-subtitle {
+    @apply mt-1 text-sm text-gray-500;
+  }
+  .knp-section-title {
+    @apply text-xs font-semibold uppercase tracking-wide text-gray-500;
+  }
+
+  /* Stat strip: one bordered row split into columns, PDF-style */
+  .knp-stat-strip {
+    @apply grid grid-cols-2 divide-x divide-y divide-gray-200 overflow-hidden rounded-md border border-gray-200 bg-white sm:grid-cols-4 sm:divide-y-0;
+  }
+  .knp-stat-cell {
+    @apply px-4 py-4;
+  }
+  .knp-stat-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-gray-500;
+  }
+  .knp-stat-value {
+    @apply mt-1 text-2xl font-bold text-gray-900;
+  }
+
+  /* Table-style list header */
+  .knp-table-head {
+    @apply grid gap-4 border-b border-gray-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500;
+  }
+
+  /* Status / concentration pills */
+  .knp-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .knp-badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+  .knp-badge-warning {
+    @apply bg-amber-100 text-amber-800;
+  }
+  .knp-badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+  .knp-badge-neutral {
+    @apply bg-gray-100 text-gray-700;
+  }
+
+  /* Progress / evidence bars */
+  .knp-bar-track {
+    @apply h-1.5 overflow-hidden rounded-full bg-gray-100;
+  }
+  .knp-bar-fill {
+    @apply h-full rounded-full bg-[var(--color-brand)];
+  }
+
+  .knp-link {
+    @apply text-gray-900 hover:text-[var(--color-brand)] hover:underline;
+  }
 }

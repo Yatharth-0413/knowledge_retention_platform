@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getTeamDashboard } from '../api/analytics'
 import type { TeamDashboard } from '../api/types'
+import { DocumentsByTypeChart, FreshnessDonutChart, KnowledgeByMemberChart, KnowledgeByTopicChart } from './AnalyticsCharts'
 
 const STAT_TILES: { key: keyof Pick<TeamDashboard, 'member_count' | 'document_count' | 'topic_count' | 'active_contributor_count'>; label: string }[] = [
   { key: 'member_count', label: 'Members' },
@@ -36,18 +37,18 @@ export function TeamDashboardStats({ teamId }: { teamId: number }) {
 
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="knp-stat-strip">
         {STAT_TILES.map(({ key, label }) => (
-          <div key={key} className="rounded-lg border border-gray-200 bg-white p-4">
-            <p className="text-2xl font-semibold text-gray-900">{dashboard[key]}</p>
-            <p className="text-xs text-gray-500">{label}</p>
+          <div key={key} className="knp-stat-cell">
+            <p className="knp-stat-label">{label}</p>
+            <p className="knp-stat-value">{dashboard[key]}</p>
           </div>
         ))}
       </div>
 
       {coverageTotal > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="mb-2 text-xs font-medium text-gray-500">Knowledge coverage</p>
+        <div className="knp-card p-4">
+          <p className="knp-section-title mb-2">Knowledge coverage</p>
           <div className="flex h-2 overflow-hidden rounded-full bg-gray-100">
             <div
               className="bg-green-500"
@@ -79,9 +80,16 @@ export function TeamDashboardStats({ teamId }: { teamId: number }) {
         </div>
       )}
 
+      <div className="grid gap-4 md:grid-cols-2">
+        <KnowledgeByMemberChart data={dashboard.knowledge_by_member} />
+        <KnowledgeByTopicChart data={dashboard.knowledge_by_topic} />
+        <FreshnessDonutChart data={dashboard.freshness_breakdown} />
+        <DocumentsByTypeChart data={dashboard.documents_by_type} />
+      </div>
+
       {dashboard.recent_activity.length > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="mb-2 text-xs font-medium text-gray-500">Recent activity</p>
+        <div className="knp-card p-4">
+          <p className="knp-section-title mb-2">Recent activity</p>
           <ul className="space-y-1 text-sm text-gray-700">
             {dashboard.recent_activity.map((item, i) => (
               <li key={i}>

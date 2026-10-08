@@ -39,7 +39,7 @@ export function TeamChat({ teamId }: { teamId: number }) {
       ) : (
         <ul className="space-y-4">
           {exchanges.map((ex, i) => (
-            <li key={i} className="rounded-lg border border-gray-200 bg-white p-4">
+            <li key={i} className="knp-card p-4">
               <p className="font-medium text-gray-900">{ex.question}</p>
               {ex.error ? (
                 <p className="mt-2 text-sm text-red-600">Something went wrong. Try again.</p>
@@ -53,7 +53,7 @@ export function TeamChat({ teamId }: { teamId: number }) {
                   )}
                   {ex.response.sources.length > 0 && (
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">Sources</p>
+                      <p className="knp-section-title mb-1">Sources</p>
                       <ul className="space-y-1 text-xs text-gray-600">
                         {ex.response.sources.map((s, si) => (
                           <li key={si}>
@@ -66,9 +66,7 @@ export function TeamChat({ teamId }: { teamId: number }) {
                   )}
                   {ex.response.contributors.length > 0 && (
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">
-                        Relevant contributors
-                      </p>
+                      <p className="knp-section-title mb-1">Relevant contributors</p>
                       <ul className="text-xs text-gray-600">
                         {ex.response.contributors.map((c) => (
                           <li key={c.user_id}>
@@ -91,13 +89,9 @@ export function TeamChat({ teamId }: { teamId: number }) {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask about your team's documented knowledge…"
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+          className="knp-input flex-1"
         />
-        <button
-          type="submit"
-          disabled={asking}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <button type="submit" disabled={asking} className="knp-btn-primary">
           {asking ? 'Asking…' : 'Ask'}
         </button>
       </form>

@@ -25,12 +25,18 @@ def list_team_topics(
     team_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[TopicSummaryOut]:
     require_team_access(team_id, current_user, db)
-
+    # Distinct evidence SUBJECTS per topic, not distinct uploaders - a document's
+    # topics can be credited to someone other than whoever uploaded the file (see
+    # knowledge/person_attribution.py). Scoped through Document.team_id (not a
+    # bare KnowledgeEvidence.user_id-in-roster filter, which would pull in a
+    # person's evidence from every team they're on - KnowledgeEvidence has no
+    # team_id of its own).
+    subject = func.coalesce(DocumentTopic.subject_user_id, Document.uploaded_by_id)
     rows = (
         db.query(
             Topic.id,
             Topic.name,
-            func.count(func.distinct(Document.uploaded_by_id)).label("contributor_count"),
+            func.count(func.distinct(subject)).label("contributor_count"),
             func.count(func.distinct(Document.id)).label("document_count"),
         )
         .join(DocumentTopic, DocumentTopic.topic_id == Topic.id)
@@ -56,6 +62,20 @@ def get_team_topic(
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
 
+    # Guard against a direct/URL-navigated topic_id that isn't actually one of
+    # this team's own topics - same leak class as list_team_topics above: a team
+    # member's evidence on a globally-shared topic name could otherwise surface
+    # here even when it came entirely from a *different* team's documents.
+    is_team_topic = (
+        db.query(DocumentTopic)
+        .join(Document, Document.id == DocumentTopic.document_id)
+        .filter(DocumentTopic.topic_id == topic_id, Document.team_id == team_id)
+        .first()
+        is not None
+    )
+    if not is_team_topic:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
+
     people_rows = (
         db.query(KnowledgeEvidence, User)
         .join(User, User.id == KnowledgeEvidence.user_id)
@@ -70,6 +90,7 @@ def get_team_topic(
             designation=user.designation,
             score=evidence.score,
             document_count=evidence.document_count,
+            freshness_label=evidence.freshness_label,
         )
         for evidence, user in people_rows
     ]
@@ -109,7 +130,11 @@ def get_user_knowledge(
     )
     return [
         UserTopicEvidenceOut(
-            topic_id=topic.id, topic_name=topic.name, score=evidence.score, document_count=evidence.document_count
+            topic_id=topic.id,
+            topic_name=topic.name,
+            score=evidence.score,
+            document_count=evidence.document_count,
+            freshness_label=evidence.freshness_label,
         )
         for evidence, topic in rows
     ]

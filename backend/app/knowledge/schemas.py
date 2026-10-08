@@ -14,6 +14,7 @@ class TopicPersonEvidenceOut(BaseModel):
     designation: str | None = None
     score: float
     document_count: int
+    freshness_label: str
 
 
 class TopicDocumentOut(BaseModel):
@@ -35,3 +36,4 @@ class UserTopicEvidenceOut(BaseModel):
     topic_name: str
     score: float
     document_count: int
+    freshness_label: str
