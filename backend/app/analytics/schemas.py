@@ -13,6 +13,29 @@ class RecentActivityItem(BaseModel):
     created_at: str
 
 
+class KnowledgeByMemberItem(BaseModel):
+    user_id: int
+    name: str
+    avg_score: float
+
+
+class KnowledgeByTopicItem(BaseModel):
+    topic_id: int
+    topic_name: str
+    avg_score: float
+
+
+class FreshnessBreakdown(BaseModel):
+    new: int
+    medium: int
+    old: int
+
+
+class DocumentTypeCount(BaseModel):
+    file_type: str
+    count: int
+
+
 class TeamDashboardOut(BaseModel):
     member_count: int
     document_count: int
@@ -20,6 +43,10 @@ class TeamDashboardOut(BaseModel):
     active_contributor_count: int
     coverage: CoverageBuckets
     recent_activity: list[RecentActivityItem]
+    knowledge_by_member: list[KnowledgeByMemberItem]
+    knowledge_by_topic: list[KnowledgeByTopicItem]
+    freshness_breakdown: FreshnessBreakdown
+    documents_by_type: list[DocumentTypeCount]
 
 
 class DependencyContributor(BaseModel):

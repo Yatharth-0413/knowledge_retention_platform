@@ -12,12 +12,16 @@ from app.config import settings
 from app.database import get_db
 from app.documents.chunking import chunk_text
 from app.documents.email_parser import EmailParseError, parse_outlook_file
-from app.documents.extraction import extract_text
+from app.documents.extraction import extract_rows, extract_text
 from app.documents.models import Document, DocumentChunk, DocumentStatus, DocumentType
 from app.documents.schemas import DocumentDetailOut, DocumentOut, EmailAttachmentOut, EmailIngestOut
+from app.knowledge.person_attribution import match_rows_to_members, team_roster
 from app.knowledge.service import embed_document_chunks, process_document_topics
 from app.teams.access import require_team_access, team_user_ids
+from app.users.access import can_view_user_profile
 from app.users.models import User
+
+_STRUCTURED_TYPES = {DocumentType.XLSX, DocumentType.CSV}
 
 router = APIRouter(tags=["documents"])
 
@@ -38,13 +42,23 @@ def _save_file(team_id: int, file_bytes: bytes, extension: str) -> Path:
     return stored_path
 
 
-async def _run_pipeline(db: Session, document: Document, get_text: Callable[[], str]) -> int:
+async def _run_pipeline(
+    db: Session,
+    document: Document,
+    get_text: Callable[[], str],
+    get_topic_text: Callable[[], str] | None = None,
+) -> int:
     """Extract -> chunk -> topics -> embeddings for one document; returns the chunk count.
 
     Runs inside a savepoint so any failure (not just ExtractionError) marks the
     document FAILED instead of leaving it stuck in PROCESSING with a half-written session.
     Parsing, topic extraction (Ollama) and embedding are slow synchronous calls, so they run
     in the threadpool to keep the event loop free for other requests.
+
+    get_topic_text lets a caller feed topic extraction different text than what gets chunked/
+    embedded (defaults to the same text) - the email path uses this so synthetic "Subject: /
+    From: / Date:" header lines, which are useful context for chat citations, don't get read
+    by the LLM as if they were document topics themselves.
     """
     try:
         with db.begin_nested():
@@ -56,7 +70,55 @@ async def _run_pipeline(db: Session, document: Document, get_text: Callable[[], 
             db.add_all(chunks)
             document.status = DocumentStatus.READY
             db.flush()
-            await run_in_threadpool(process_document_topics, db, document, text)
+            topic_text = await run_in_threadpool(get_topic_text) if get_topic_text else text
+            await run_in_threadpool(process_document_topics, db, document, topic_text)
+            await run_in_threadpool(embed_document_chunks, chunks)
+        return len(chunks)
+    except Exception as exc:  # noqa: BLE001 - any pipeline failure is recorded on the document
+        document.status = DocumentStatus.FAILED
+        document.error_message = str(exc)
+        return 0
+
+
+async def _run_structured_pipeline(db: Session, team, document: Document, file_bytes: bytes, file_type: DocumentType) -> int:
+    """Like _run_pipeline, but for XLSX/CSV: a roster-style spreadsheet documents
+    *other people's* knowledge, not the uploader's. If any row names a known team
+    member (app.knowledge.person_attribution), that row's topics are credited to
+    them specifically instead of the uploader, and the uploader gets no separate
+    whole-document credit for those same rows. Falls through to exactly today's
+    uploader-credited behavior when no row matches anyone - ordinary,
+    non-roster spreadsheets are unaffected.
+
+    Chunking/embedding always covers the whole document text (unchanged) so chat
+    retrieval and citations work the same regardless of attribution.
+    """
+    try:
+        with db.begin_nested():
+            full_text = await run_in_threadpool(extract_text, file_bytes, file_type)
+            chunks = [
+                DocumentChunk(document_id=document.id, chunk_index=index, content=content)
+                for index, content in enumerate(chunk_text(full_text))
+            ]
+            db.add_all(chunks)
+            document.status = DocumentStatus.READY
+            db.flush()
+
+            roster = await run_in_threadpool(team_roster, db, team)
+            rows = await run_in_threadpool(extract_rows, file_bytes, file_type)
+            matches = match_rows_to_members(rows, roster)
+
+            if matches:
+                for user, row_text in matches:
+                    await run_in_threadpool(process_document_topics, db, document, row_text, user.id)
+            else:
+                # No "# Sheet:" marker lines in topic-extraction input - they're
+                # formatting, not content, and the LLM/heuristic will otherwise
+                # latch onto "Sheet" as if it were a topic.
+                topic_text = "\n".join(
+                    line for line in full_text.splitlines() if not line.startswith("# Sheet:")
+                )
+                await run_in_threadpool(process_document_topics, db, document, topic_text)
+
             await run_in_threadpool(embed_document_chunks, chunks)
         return len(chunks)
     except Exception as exc:  # noqa: BLE001 - any pipeline failure is recorded on the document
@@ -117,7 +179,10 @@ async def upload_document(
     db.commit()
     db.refresh(document)
 
-    await _run_pipeline(db, document, lambda: extract_text(file_bytes, file_type))
+    if file_type in _STRUCTURED_TYPES:
+        await _run_structured_pipeline(db, team, document, file_bytes, file_type)
+    else:
+        await _run_pipeline(db, document, lambda: extract_text(file_bytes, file_type))
 
     db.commit()
     db.refresh(document)
@@ -144,7 +209,9 @@ async def _ingest_email(
     subject = parsed["subject"] or "(no subject)"
     sent_on = parsed["date"].isoformat() if parsed["date"] else "unknown"
     sender_label = f'{parsed["sender_name"]} <{parsed["sender_email"]}>'.strip()
-    # Header lines go first: topic extraction only reads the head of the text.
+    # Header lines go first so chat citations show who/when - but they're kept out of topic
+    # extraction's input (get_topic_text below) so the LLM doesn't read "Subject"/"From"/the
+    # sender's own name as if they were document topics.
     email_text = f"Subject: {subject}\nFrom: {sender_label}\nDate: {sent_on}\n\n{parsed['body']}".strip()
 
     email_document = _new_document(
@@ -153,7 +220,9 @@ async def _ingest_email(
     db.add(email_document)
     db.commit()
     db.refresh(email_document)
-    body_chunk_count = await _run_pipeline(db, email_document, lambda: email_text)
+    body_chunk_count = await _run_pipeline(
+        db, email_document, lambda: email_text, get_topic_text=lambda: parsed["body"]
+    )
     db.commit()
 
     processed: list[EmailAttachmentOut] = []
@@ -199,6 +268,31 @@ def list_team_documents(
 ) -> list[Document]:
     require_team_access(team_id, current_user, db)
     return db.query(Document).filter(Document.team_id == team_id).order_by(Document.created_at.desc()).all()
+
+
+@router.get("/users/{user_id}/documents", response_model=list[DocumentOut])
+def list_user_documents(
+    user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> list[Document]:
+    """Documents a person uploaded, across whichever team(s) they belong to.
+
+    Keyed off User.uploaded_by_id directly rather than User.team_id - a manager's
+    own documents can't be found via team_id (it's only set for members; a manager
+    relates to a team through Team.manager_id, and can manage more than one team -
+    see the cross-team leak fixes in analytics/router.py for the same distinction).
+    Reuses the same visibility rule as /users/{user_id}/knowledge.
+    """
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not can_view_user_profile(current_user, target):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this profile")
+    return (
+        db.query(Document)
+        .filter(Document.uploaded_by_id == user_id)
+        .order_by(Document.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/documents/{document_id}", response_model=DocumentDetailOut)

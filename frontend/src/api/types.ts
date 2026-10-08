@@ -38,10 +38,12 @@ export interface KnowledgeDocument {
   id: number
   team_id: number
   uploaded_by_id: number
+  uploaded_by_name: string
   filename: string
   file_type: DocumentFileType
   status: DocumentStatus
   error_message: string | null
+  parent_document_id: number | null
   created_at: string
 }
 
@@ -76,6 +78,7 @@ export interface TopicPersonEvidence {
   designation: string | null
   score: number
   document_count: number
+  freshness_label: FreshnessLabel
 }
 
 export interface TopicDocument {
@@ -92,11 +95,14 @@ export interface TopicDetail {
   documents: TopicDocument[]
 }
 
+export type FreshnessLabel = 'New' | 'Medium' | 'Old'
+
 export interface UserTopicEvidence {
   topic_id: number
   topic_name: string
   score: number
   document_count: number
+  freshness_label: FreshnessLabel
 }
 
 export type UserProfile = CurrentUser
@@ -113,6 +119,29 @@ export interface RecentActivityItem {
   created_at: string
 }
 
+export interface KnowledgeByMemberItem {
+  user_id: number
+  name: string
+  avg_score: number
+}
+
+export interface KnowledgeByTopicItem {
+  topic_id: number
+  topic_name: string
+  avg_score: number
+}
+
+export interface FreshnessBreakdown {
+  new: number
+  medium: number
+  old: number
+}
+
+export interface DocumentTypeCount {
+  file_type: DocumentFileType
+  count: number
+}
+
 export interface TeamDashboard {
   member_count: number
   document_count: number
@@ -120,6 +149,10 @@ export interface TeamDashboard {
   active_contributor_count: number
   coverage: CoverageBuckets
   recent_activity: RecentActivityItem[]
+  knowledge_by_member: KnowledgeByMemberItem[]
+  knowledge_by_topic: KnowledgeByTopicItem[]
+  freshness_breakdown: FreshnessBreakdown
+  documents_by_type: DocumentTypeCount[]
 }
 
 export interface DependencyContributor {

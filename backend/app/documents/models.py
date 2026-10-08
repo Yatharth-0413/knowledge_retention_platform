@@ -49,6 +49,11 @@ class Document(Base):
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan", order_by="DocumentChunk.chunk_index"
     )
 
+    @property
+    def uploaded_by_name(self) -> str:
+        # For emails this is the credited sender, not necessarily the uploader - see email_parser.py.
+        return self.uploaded_by.name
+
 
 class DocumentChunk(Base):
     __tablename__ = "document_chunks"

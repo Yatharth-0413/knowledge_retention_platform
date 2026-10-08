@@ -9,6 +9,10 @@ from app.analytics.schemas import (
     CoverageBuckets,
     DependencyContributor,
     DependencyTopicOut,
+    DocumentTypeCount,
+    FreshnessBreakdown,
+    KnowledgeByMemberItem,
+    KnowledgeByTopicItem,
     RecentActivityItem,
     TeamDashboardOut,
 )
@@ -31,13 +35,24 @@ def get_team_dashboard(
     team = require_team_access(team_id, current_user, db)
 
     document_count = db.query(func.count(Document.id)).filter(Document.team_id == team_id).scalar() or 0
+    # "Active contributor" / per-topic coverage must count distinct EVIDENCE
+    # SUBJECTS, not distinct uploaders - a document's topics can be credited to
+    # someone other than whoever uploaded the file (e.g. a roster spreadsheet
+    # uploaded by a manager; see knowledge/person_attribution.py). Scoped through
+    # Document.team_id (not a bare KnowledgeEvidence.user_id-in-roster filter,
+    # which would pull in a person's evidence from every team they're on, not
+    # just this one - KnowledgeEvidence has no team_id of its own).
+    subject = func.coalesce(DocumentTopic.subject_user_id, Document.uploaded_by_id)
     active_contributor_count = (
-        db.query(func.count(func.distinct(Document.uploaded_by_id))).filter(Document.team_id == team_id).scalar()
+        db.query(func.count(func.distinct(subject)))
+        .join(Document, Document.id == DocumentTopic.document_id)
+        .filter(Document.team_id == team_id)
+        .scalar()
         or 0
     )
 
     contributor_counts = (
-        db.query(Topic.id, func.count(func.distinct(Document.uploaded_by_id)).label("contributors"))
+        db.query(Topic.id, func.count(func.distinct(subject)).label("contributors"))
         .join(DocumentTopic, DocumentTopic.topic_id == Topic.id)
         .join(Document, Document.id == DocumentTopic.document_id)
         .filter(Document.team_id == team_id)
@@ -66,6 +81,63 @@ def get_team_dashboard(
         for doc, name in recent_docs
     ]
 
+    # Same team_topic_ids/roster scoping as get_dependency_analysis below - KnowledgeEvidence
+    # is global per (user, topic), not team-scoped, so these chart aggregates must go through
+    # this team's own DocumentTopic rows rather than a bare roster-membership filter.
+    team_topic_ids = (
+        db.query(DocumentTopic.topic_id)
+        .join(Document, Document.id == DocumentTopic.document_id)
+        .filter(Document.team_id == team_id)
+        .distinct()
+    )
+    roster_ids = team_user_ids(team)
+
+    member_rows = (
+        db.query(User.id, User.name, func.avg(KnowledgeEvidence.score))
+        .join(KnowledgeEvidence, KnowledgeEvidence.user_id == User.id)
+        .filter(User.id.in_(roster_ids), KnowledgeEvidence.topic_id.in_(team_topic_ids))
+        .group_by(User.id, User.name)
+        .all()
+    )
+    knowledge_by_member = [
+        KnowledgeByMemberItem(user_id=uid, name=name, avg_score=round(avg_score or 0.0, 1))
+        for uid, name, avg_score in member_rows
+    ]
+
+    topic_rows = (
+        db.query(Topic.id, Topic.name, func.avg(KnowledgeEvidence.score))
+        .join(KnowledgeEvidence, KnowledgeEvidence.topic_id == Topic.id)
+        .filter(KnowledgeEvidence.topic_id.in_(team_topic_ids), KnowledgeEvidence.user_id.in_(roster_ids))
+        .group_by(Topic.id, Topic.name)
+        .all()
+    )
+    knowledge_by_topic = [
+        KnowledgeByTopicItem(topic_id=tid, topic_name=name, avg_score=round(avg_score or 0.0, 1))
+        for tid, name, avg_score in topic_rows
+    ]
+
+    freshness_counts = dict(
+        db.query(KnowledgeEvidence.freshness_label, func.count(KnowledgeEvidence.id))
+        .filter(KnowledgeEvidence.topic_id.in_(team_topic_ids), KnowledgeEvidence.user_id.in_(roster_ids))
+        .group_by(KnowledgeEvidence.freshness_label)
+        .all()
+    )
+    freshness_breakdown = FreshnessBreakdown(
+        new=freshness_counts.get("New", 0),
+        medium=freshness_counts.get("Medium", 0),
+        old=freshness_counts.get("Old", 0),
+    )
+
+    documents_by_type = [
+        DocumentTypeCount(file_type=file_type.value, count=count)
+        for file_type, count in (
+            db.query(Document.file_type, func.count(Document.id))
+            .filter(Document.team_id == team_id)
+            .group_by(Document.file_type)
+            .all()
+        )
+    ]
+
     return TeamDashboardOut(
         member_count=len(team.members),
         document_count=document_count,
@@ -73,6 +145,10 @@ def get_team_dashboard(
         active_contributor_count=active_contributor_count,
         coverage=coverage,
         recent_activity=recent_activity,
+        knowledge_by_member=knowledge_by_member,
+        knowledge_by_topic=knowledge_by_topic,
+        freshness_breakdown=freshness_breakdown,
+        documents_by_type=documents_by_type,
     )
 
 
@@ -82,11 +158,22 @@ def get_dependency_analysis(
 ) -> list[DependencyTopicOut]:
     team = require_team_access(team_id, current_user, db)
 
+    # Scope to topics this team's own documents actually produced - filtering by
+    # team membership alone (as this used to) leaks a topic into every team a
+    # person belongs to, even a team with zero documents on it, whenever that
+    # person has KnowledgeEvidence on the same (globally-deduplicated) topic from
+    # a *different* team (e.g. a manager who manages more than one team).
+    team_topic_ids = (
+        db.query(DocumentTopic.topic_id)
+        .join(Document, Document.id == DocumentTopic.document_id)
+        .filter(Document.team_id == team_id)
+        .distinct()
+    )
     rows = (
         db.query(Topic, KnowledgeEvidence, User)
         .join(KnowledgeEvidence, KnowledgeEvidence.topic_id == Topic.id)
         .join(User, User.id == KnowledgeEvidence.user_id)
-        .filter(User.id.in_(team_user_ids(team)))
+        .filter(KnowledgeEvidence.topic_id.in_(team_topic_ids), User.id.in_(team_user_ids(team)))
         .order_by(Topic.id, KnowledgeEvidence.score.desc())
         .all()
     )
@@ -140,10 +227,16 @@ def get_contribution_activity(
         .all()
     )
 
+    # Derived straight from this team's own DocumentTopic/Document rows (subject
+    # attribution, falling back to uploader - see knowledge/person_attribution.py)
+    # rather than the global KnowledgeEvidence table, which has no team scoping
+    # and would otherwise count a person's topics from every team they're on.
+    subject = func.coalesce(DocumentTopic.subject_user_id, Document.uploaded_by_id)
     topic_counts = dict(
-        db.query(KnowledgeEvidence.user_id, func.count(func.distinct(KnowledgeEvidence.topic_id)))
-        .filter(KnowledgeEvidence.user_id.in_(user_ids))
-        .group_by(KnowledgeEvidence.user_id)
+        db.query(subject, func.count(func.distinct(DocumentTopic.topic_id)))
+        .join(Document, Document.id == DocumentTopic.document_id)
+        .filter(Document.team_id == team_id)
+        .group_by(subject)
         .all()
     )
 

@@ -6,6 +6,11 @@ export async function listDocuments(teamId: number): Promise<KnowledgeDocument[]
   return data
 }
 
+export async function getUserDocuments(userId: number): Promise<KnowledgeDocument[]> {
+  const { data } = await apiClient.get<KnowledgeDocument[]>(`/users/${userId}/documents`)
+  return data
+}
+
 export async function uploadDocument(teamId: number, file: File): Promise<KnowledgeDocument | EmailIngestResult> {
   const formData = new FormData()
   formData.append('file', file)

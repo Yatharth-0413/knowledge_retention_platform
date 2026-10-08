@@ -38,6 +38,7 @@ services:
     volumes:
       - ./backend:/app
       - uploads_data:/app/uploads
+      - huggingface_cache:/root/.cache/huggingface
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,3 +62,4 @@ volumes:
   postgres_data:
   ollama_data:
   uploads_data:
+  huggingface_cache:

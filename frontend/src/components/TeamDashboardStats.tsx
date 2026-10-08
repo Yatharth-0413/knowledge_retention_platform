@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getTeamDashboard } from '../api/analytics'
 import type { TeamDashboard } from '../api/types'
+import { DocumentsByTypeChart, FreshnessDonutChart, KnowledgeByMemberChart, KnowledgeByTopicChart } from './AnalyticsCharts'
 
 const STAT_TILES: { key: keyof Pick<TeamDashboard, 'member_count' | 'document_count' | 'topic_count' | 'active_contributor_count'>; label: string }[] = [
   { key: 'member_count', label: 'Members' },
@@ -78,6 +79,13 @@ export function TeamDashboardStats({ teamId }: { teamId: number }) {
           </div>
         </div>
       )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <KnowledgeByMemberChart data={dashboard.knowledge_by_member} />
+        <KnowledgeByTopicChart data={dashboard.knowledge_by_topic} />
+        <FreshnessDonutChart data={dashboard.freshness_breakdown} />
+        <DocumentsByTypeChart data={dashboard.documents_by_type} />
+      </div>
 
       {dashboard.recent_activity.length > 0 && (
         <div className="knp-card p-4">

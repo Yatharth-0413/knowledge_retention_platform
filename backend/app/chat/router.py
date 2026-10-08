@@ -19,4 +19,4 @@ def chat(
     db: Session = Depends(get_db),
 ) -> ChatResponseOut:
     require_team_access(team_id, current_user, db)
-    return answer_question(db, team_id, payload.question)
+    return answer_question(db, team_id, payload.question, current_user)
