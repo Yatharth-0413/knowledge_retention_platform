@@ -29,6 +29,7 @@ Then, depending on what you're doing:
 | Understand the Outlook email-ingestion feature specifically | `EMAIL_FEATURE_README.md` (+ `EMAIL_FEATURE_PROMPTS.md` for its build log) |
 | See manual test run logs | `TESTING_LOG.md` (original MVP demo script), `Test_logging_v2.md` (post-email-merge regression pass), `Test_logging_v3.md` (Knowledge Recommendation System) |
 | See the bug report that drove the 2026-10-08 post-MVP pass | `My_analysis_on_project.md` |
+| See *why* a technical decision was made, not just what the code does | `DECISION_LOG.md` (ADR-format) |
 
 ## Quick start
 
@@ -55,3 +56,5 @@ pattern and a gotcha around importing SQLAlchemy models in one-off debug scripts
    its own — see the cross-team leak fixes in `PROGRESS.md` for why this matters), and verify changes
    live in-browser against real data, not just a clean `tsc`/`vite build`.
 4. Update `PROGRESS.md` after each completed task, same as every prior session has.
+5. If the task involved a real architectural choice (not just an obvious implementation detail), add an
+   entry to `DECISION_LOG.md` — context, what was decided, what else was considered, and the trade-offs.
