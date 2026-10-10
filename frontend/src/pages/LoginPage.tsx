@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import sgLogo from '../assets/societe-generale-logo.png'
 import { useAuthStore } from '../store/authStore'
 
 export function LoginPage() {
@@ -27,9 +28,9 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
       <div className="w-full max-w-sm knp-card p-8">
-        <div className="mb-6 flex items-center gap-2.5">
-          <span className="h-6 w-6 rounded-sm bg-[var(--color-brand)]" />
-          <span className="text-sm font-bold tracking-tight text-gray-900">Knowledge Retention Platform</span>
+        <div className="mb-8 flex flex-col items-center gap-2">
+          <img src={sgLogo} alt="Société Générale" className="h-10 w-auto" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Knowledge Retention Platform</span>
         </div>
         <h1 className="mb-1 text-2xl font-bold text-gray-900">Log in</h1>
         <p className="mb-6 text-sm text-gray-500">Team Workspace</p>

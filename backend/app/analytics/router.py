@@ -26,6 +26,7 @@ from app.users.models import User
 router = APIRouter(tags=["analytics"])
 
 _HIGH_CONCENTRATION_SHARE = 0.6
+_MODERATE_CONCENTRATION_SHARE = 0.4
 
 
 @router.get("/teams/{team_id}/dashboard", response_model=TeamDashboardOut)
@@ -194,7 +195,12 @@ def get_dependency_analysis(
             for user, evidence in entries
         ]
         top_share = contributors[0].share if contributors else 0.0
-        concentration = "HIGH" if top_share >= _HIGH_CONCENTRATION_SHARE else "DISTRIBUTED"
+        if top_share >= _HIGH_CONCENTRATION_SHARE:
+            concentration = "HIGH"
+        elif top_share >= _MODERATE_CONCENTRATION_SHARE:
+            concentration = "MODERATE"
+        else:
+            concentration = "DISTRIBUTED"
         results.append(
             DependencyTopicOut(
                 topic_id=topic_id, topic_name=topic_names[topic_id], contributors=contributors, concentration=concentration

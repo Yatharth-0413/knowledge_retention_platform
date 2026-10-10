@@ -161,7 +161,7 @@ export interface DependencyContributor {
   share: number
 }
 
-export type Concentration = 'HIGH' | 'DISTRIBUTED'
+export type Concentration = 'HIGH' | 'MODERATE' | 'DISTRIBUTED'
 
 export interface DependencyTopic {
   topic_id: number

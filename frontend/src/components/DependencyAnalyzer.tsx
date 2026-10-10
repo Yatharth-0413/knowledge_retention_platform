@@ -5,7 +5,14 @@ import type { DependencyTopic } from '../api/types'
 
 const CONCENTRATION_STYLES: Record<DependencyTopic['concentration'], string> = {
   HIGH: 'knp-badge knp-badge-danger',
+  MODERATE: 'knp-badge knp-badge-warning',
   DISTRIBUTED: 'knp-badge knp-badge-success',
+}
+
+const CONCENTRATION_BAR_COLOR: Record<DependencyTopic['concentration'], string> = {
+  HIGH: 'bg-[var(--color-brand)]',
+  MODERATE: 'bg-amber-500',
+  DISTRIBUTED: 'bg-green-500',
 }
 
 export function DependencyAnalyzer({ teamId }: { teamId: number }) {
@@ -34,7 +41,7 @@ export function DependencyAnalyzer({ teamId }: { teamId: number }) {
             {topic.contributors.map((c, i) => (
               <div
                 key={c.user_id}
-                className="h-full bg-[var(--color-brand)] first:rounded-l-full last:rounded-r-full"
+                className={`h-full first:rounded-l-full last:rounded-r-full ${CONCENTRATION_BAR_COLOR[topic.concentration]}`}
                 style={{ width: `${c.share * 100}%`, opacity: Math.max(0.25, 1 - i * 0.15) }}
               />
             ))}

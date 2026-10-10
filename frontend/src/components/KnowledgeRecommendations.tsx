@@ -3,6 +3,16 @@ import { Link } from 'react-router-dom'
 import { getTeamRecommendations } from '../api/recommendations'
 import type { TeamRecommendations, TopicRecommendation } from '../api/types'
 import { RecommendationsCoverageChart } from './RecommendationsCharts'
+import { Dropdown, DropdownItem } from './ui/Dropdown'
+
+type CategoryFilter = 'all' | 'functional' | 'technical' | 'other'
+
+const FILTERS: { id: CategoryFilter; label: string }[] = [
+  { id: 'all', label: 'All categories' },
+  { id: 'functional', label: 'Functional knowledge' },
+  { id: 'technical', label: 'Technical knowledge' },
+  { id: 'other', label: 'Mixed / unclassified' },
+]
 
 const CATEGORY_LABELS: Record<TopicRecommendation['category'], string> = {
   functional: 'Functional',
@@ -89,6 +99,7 @@ function TopicGroup({ title, topics, emptyText }: { title: string; topics: Topic
 export function KnowledgeRecommendations({ teamId }: { teamId: number }) {
   const [data, setData] = useState<TeamRecommendations | null>(null)
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<CategoryFilter>('all')
 
   useEffect(() => {
     let cancelled = false
@@ -111,13 +122,50 @@ export function KnowledgeRecommendations({ teamId }: { teamId: number }) {
   const functionalTopics = data.topics.filter((t) => t.category === 'functional')
   const technicalTopics = data.topics.filter((t) => t.category === 'technical')
   const otherTopics = data.topics.filter((t) => t.category === 'mixed' || t.category === 'unclassified')
+  const currentFilter = FILTERS.find((f) => f.id === filter)!
 
   return (
     <div className="space-y-6">
       <RecommendationsCoverageChart summary={data.summary} />
-      <TopicGroup title="Functional knowledge" topics={functionalTopics} emptyText="No functional topics yet." />
-      <TopicGroup title="Technical knowledge" topics={technicalTopics} emptyText="No technical topics yet." />
-      <TopicGroup title="Mixed / unclassified topics" topics={otherTopics} emptyText="No mixed or unclassified topics." />
+
+      <div className="flex justify-end">
+        <Dropdown
+          align="right"
+          trigger={({ toggle }) => (
+            <button type="button" onClick={toggle} className="knp-btn-secondary">
+              {currentFilter.label}
+              <span className="ml-1.5 text-gray-400">▾</span>
+            </button>
+          )}
+        >
+          {(close) => (
+            <div className="w-56">
+              {FILTERS.map((f) => (
+                <DropdownItem
+                  key={f.id}
+                  active={f.id === filter}
+                  onClick={() => {
+                    setFilter(f.id)
+                    close()
+                  }}
+                >
+                  {f.label}
+                </DropdownItem>
+              ))}
+            </div>
+          )}
+        </Dropdown>
+      </div>
+
+      {(filter === 'all' || filter === 'functional') && (
+        <TopicGroup title="Functional knowledge" topics={functionalTopics} emptyText="No functional topics yet." />
+      )}
+      {(filter === 'all' || filter === 'technical') && (
+        <TopicGroup title="Technical knowledge" topics={technicalTopics} emptyText="No technical topics yet." />
+      )}
+      {(filter === 'all' || filter === 'other') && (
+        <TopicGroup title="Mixed / unclassified topics" topics={otherTopics} emptyText="No mixed or unclassified topics." />
+      )}
     </div>
   )
 }

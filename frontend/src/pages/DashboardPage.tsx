@@ -74,12 +74,20 @@ export function DashboardPage() {
       {teams.length === 0 ? (
         <p className="text-sm text-gray-500">No teams yet.</p>
       ) : (
-        <ul className="knp-list">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {teams.map((team) => (
-            <li key={team.id} className="flex items-center justify-between px-4 py-3">
-              <span className="font-medium text-gray-900">{team.name}</span>
-              <Link to={`/teams/${team.id}`} className="knp-link text-sm">
-                View team →
+            <li key={team.id}>
+              <Link
+                to={`/teams/${team.id}`}
+                className="knp-card knp-card-hover block h-full p-4 transition-colors hover:border-[var(--color-brand)]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-50 text-sm font-semibold text-[var(--color-brand)]">
+                    {team.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="truncate font-medium text-gray-900">{team.name}</span>
+                </div>
+                <span className="knp-link mt-3 inline-block text-sm">View team →</span>
               </Link>
             </li>
           ))}

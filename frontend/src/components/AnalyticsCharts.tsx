@@ -11,6 +11,12 @@ const FRESHNESS_COLORS: Record<'New' | 'Medium' | 'Old', string> = {
 }
 const TYPE_COLORS = ['#c8102e', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6']
 
+/** Truncates long category labels so they render on a single line instead of wrapping and
+ * overlapping neighboring bars/ticks in a vertical bar chart. */
+function truncateLabel(value: string, max = 18): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+}
+
 export function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="knp-card p-4">
@@ -28,7 +34,14 @@ export function KnowledgeByMemberChart({ data }: { data: KnowledgeByMemberItem[]
         <BarChart data={data} layout="vertical" margin={{ left: 12, right: 24 }}>
           <CartesianGrid horizontal={false} stroke="#f1f5f9" />
           <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
-          <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={120}
+            tick={{ fontSize: 12 }}
+            tickFormatter={(value: string) => truncateLabel(value, 16)}
+            interval={0}
+          />
           <Tooltip formatter={(value) => `${value}%`} />
           <Bar dataKey="avg_score" fill={BRAND} radius={[0, 4, 4, 0]} barSize={18} />
         </BarChart>
@@ -42,13 +55,20 @@ export function KnowledgeByTopicChart({ data }: { data: KnowledgeByTopicItem[] }
   const top = [...data].sort((a, b) => b.avg_score - a.avg_score).slice(0, 8)
   return (
     <ChartCard title="Average knowledge level by topic (top 8)">
-      <ResponsiveContainer width="100%" height={Math.max(180, top.length * 36)}>
+      <ResponsiveContainer width="100%" height={Math.max(220, top.length * 42)}>
         <BarChart data={top} layout="vertical" margin={{ left: 12, right: 24 }}>
           <CartesianGrid horizontal={false} stroke="#f1f5f9" />
           <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
-          <YAxis type="category" dataKey="topic_name" width={120} tick={{ fontSize: 12 }} />
+          <YAxis
+            type="category"
+            dataKey="topic_name"
+            width={150}
+            tick={{ fontSize: 12 }}
+            tickFormatter={(value: string) => truncateLabel(value, 20)}
+            interval={0}
+          />
           <Tooltip formatter={(value) => `${value}%`} />
-          <Bar dataKey="avg_score" fill={BRAND_LIGHT} radius={[0, 4, 4, 0]} barSize={16} />
+          <Bar dataKey="avg_score" fill={BRAND_LIGHT} radius={[0, 4, 4, 0]} barSize={18} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>

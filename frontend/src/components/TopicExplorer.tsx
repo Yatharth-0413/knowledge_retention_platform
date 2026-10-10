@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getTopic, listTeamTopics } from '../api/knowledge'
 import type { TopicDetail, TopicSummary } from '../api/types'
+import { Dropdown, DropdownItem } from './ui/Dropdown'
 
 export function TopicExplorer({ teamId }: { teamId: number }) {
   const [topics, setTopics] = useState<TopicSummary[]>([])
@@ -14,7 +15,10 @@ export function TopicExplorer({ teamId }: { teamId: number }) {
   useEffect(() => {
     setLoading(true)
     listTeamTopics(teamId)
-      .then(setTopics)
+      .then((data) => {
+        setTopics(data)
+        setSelectedId((prev) => prev ?? data[0]?.id ?? null)
+      })
       .finally(() => setLoading(false))
   }, [teamId])
 
@@ -34,40 +38,62 @@ export function TopicExplorer({ teamId }: { teamId: number }) {
     [topics, query],
   )
 
+  const selectedTopic = topics.find((t) => t.id === selectedId) ?? null
+
   if (loading) return <p className="text-sm text-gray-500">Loading topics…</p>
+  if (topics.length === 0) return <p className="text-sm text-gray-500">No topics found yet. Upload documents to extract topics.</p>
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search topics…"
-          className="knp-input mb-2"
-        />
-        {filtered.length === 0 ? (
-          <p className="text-sm text-gray-500">No topics found yet. Upload documents to extract topics.</p>
-        ) : (
-          <ul className="knp-list">
-            {filtered.map((topic) => (
-              <li key={topic.id}>
-                <button
-                  onClick={() => setSelectedId(topic.id)}
-                  className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 ${
-                    selectedId === topic.id ? 'bg-red-50' : ''
-                  }`}
-                >
-                  <span className="font-medium text-gray-900">{topic.name}</span>
-                  <span className="text-xs text-gray-500">
-                    {topic.contributor_count} {topic.contributor_count === 1 ? 'person' : 'people'} ·{' '}
-                    {topic.document_count} {topic.document_count === 1 ? 'doc' : 'docs'}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+    <div className="space-y-4">
+      <Dropdown
+        className="block"
+        trigger={({ toggle }) => (
+          <button
+            type="button"
+            onClick={toggle}
+            className="knp-input flex w-full max-w-sm items-center justify-between text-left sm:w-80"
+          >
+            <span className="truncate">{selectedTopic ? selectedTopic.name : 'Select a topic…'}</span>
+            <span className="ml-2 shrink-0 text-gray-400">▾</span>
+          </button>
         )}
-      </div>
+      >
+        {(close) => (
+          <div className="w-80">
+            <div className="border-b border-gray-100 p-2">
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search topics…"
+                className="knp-input"
+              />
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <p className="px-3 py-3 text-sm text-gray-500">No topics match.</p>
+              ) : (
+                filtered.map((topic) => (
+                  <DropdownItem
+                    key={topic.id}
+                    active={selectedId === topic.id}
+                    onClick={() => {
+                      setSelectedId(topic.id)
+                      close()
+                    }}
+                  >
+                    <span className="truncate">{topic.name}</span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {topic.contributor_count} {topic.contributor_count === 1 ? 'person' : 'people'} ·{' '}
+                      {topic.document_count} {topic.document_count === 1 ? 'doc' : 'docs'}
+                    </span>
+                  </DropdownItem>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </Dropdown>
 
       <div className="knp-card p-4">
         {selectedId === null ? (
