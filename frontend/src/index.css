@@ -100,4 +100,42 @@ body {
   .knp-link {
     @apply text-gray-900 hover:text-[var(--color-brand)] hover:underline;
   }
+
+  /* Clickable card variant (dashboard tiles, etc.) */
+  .knp-card-hover {
+    @apply transition-shadow hover:border-gray-300 hover:shadow-md;
+  }
+
+  /* Tab bar — single scrollable row so tabs never wrap/overlap as they grow */
+  .knp-tabbar {
+    @apply border-b border-gray-200;
+  }
+  .knp-tabbar-scroll {
+    @apply flex gap-1 overflow-x-auto;
+    scrollbar-width: none;
+  }
+  .knp-tabbar-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .knp-tab {
+    @apply relative shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900;
+  }
+  .knp-tab-active {
+    @apply text-[var(--color-brand)];
+  }
+  .knp-tab-active::after {
+    content: '';
+    @apply absolute inset-x-3 -bottom-px block h-0.5 rounded-full bg-[var(--color-brand)];
+  }
+
+  /* Dropdown menu panel */
+  .knp-dropdown-panel {
+    @apply overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg;
+  }
+  .knp-dropdown-item {
+    @apply flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50;
+  }
+  .knp-dropdown-item-active {
+    @apply bg-red-50 font-medium text-[var(--color-brand)];
+  }
 }

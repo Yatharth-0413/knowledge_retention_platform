@@ -15,15 +15,22 @@ import 'reactflow/dist/style.css'
 import { getTeamGraph } from '../api/graph'
 import type { GraphEdge as ApiGraphEdge, GraphNode as ApiGraphNode, GraphNodeType, TeamGraph } from '../api/types'
 
-const COLUMN_X: Record<GraphNodeType, number> = { person: 40, topic: 380, document: 720 }
-const ROW_HEIGHT = 76
+const COLUMN_X: Record<GraphNodeType, number> = { person: 40, topic: 460, document: 880 }
+const ROW_HEIGHT = 68
 const NODE_TYPES: GraphNodeType[] = ['person', 'topic', 'document']
 const TYPE_LABELS: Record<GraphNodeType, string> = { person: 'People', topic: 'Topics', document: 'Documents' }
+const TYPE_GLYPHS: Record<GraphNodeType, string> = { person: 'P', topic: 'T', document: 'D' }
 
-const TYPE_STYLES: Record<GraphNodeType, { border: string; bg: string; text: string; dot: string }> = {
-  person: { border: 'border-red-400', bg: 'bg-red-50', text: 'text-red-900', dot: 'bg-red-500' },
-  topic: { border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-900', dot: 'bg-amber-500' },
-  document: { border: 'border-emerald-400', bg: 'bg-emerald-50', text: 'text-emerald-900', dot: 'bg-emerald-500' },
+const TYPE_STYLES: Record<GraphNodeType, { solid: string; ring: string; dot: string; edge: string; chip: string }> = {
+  person: { solid: 'bg-[var(--color-brand)]', ring: 'border-red-100', dot: 'bg-red-500', edge: '#f3b9c2', chip: 'bg-red-50 text-red-700' },
+  topic: { solid: 'bg-amber-500', ring: 'border-amber-100', dot: 'bg-amber-500', edge: '#fbd49b', chip: 'bg-amber-50 text-amber-700' },
+  document: {
+    solid: 'bg-emerald-500',
+    ring: 'border-emerald-100',
+    dot: 'bg-emerald-500',
+    edge: '#a4ddc2',
+    chip: 'bg-emerald-50 text-emerald-700',
+  },
 }
 
 interface CardData {
@@ -31,26 +38,37 @@ interface CardData {
   subtitle: string | null
   type: GraphNodeType
   dimmed: boolean
+  active: boolean
 }
 
-function GraphNodeCard({ data }: NodeProps<CardData>) {
+function GraphNodeChip({ data }: NodeProps<CardData>) {
   const style = TYPE_STYLES[data.type]
   return (
     <div
-      className={`rounded-md border-2 ${style.border} ${style.bg} px-3 py-2 text-xs shadow-sm transition-opacity duration-300 ${
-        data.dimmed ? 'opacity-20' : 'opacity-100'
+      className={`flex items-center gap-2.5 rounded-full border bg-white py-1.5 pl-1.5 pr-4 transition-all duration-300 ${style.ring} ${
+        data.dimmed
+          ? 'opacity-20 grayscale'
+          : data.active
+            ? 'shadow-lg ring-2 ring-offset-2 ring-offset-white ' +
+              (data.type === 'person' ? 'ring-[var(--color-brand)]' : data.type === 'topic' ? 'ring-amber-400' : 'ring-emerald-400')
+            : 'opacity-100 shadow-sm hover:shadow-md'
       }`}
-      style={{ width: 180 }}
+      style={{ width: 216 }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: '#94a3b8' }} />
-      <p className={`truncate font-medium ${style.text}`}>{data.label}</p>
-      {data.subtitle && <p className="truncate text-[10px] text-gray-500">{data.subtitle}</p>}
-      <Handle type="source" position={Position.Right} style={{ background: '#94a3b8' }} />
+      <Handle type="target" position={Position.Left} style={{ background: 'transparent', border: 'none' }} />
+      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${style.solid}`}>
+        {TYPE_GLYPHS[data.type]}
+      </span>
+      <span className="min-w-0">
+        <p className="truncate text-xs font-semibold text-gray-900">{data.label}</p>
+        {data.subtitle && <p className="truncate text-[10px] text-gray-500">{data.subtitle}</p>}
+      </span>
+      <Handle type="source" position={Position.Right} style={{ background: 'transparent', border: 'none' }} />
     </div>
   )
 }
 
-const nodeTypes = { card: GraphNodeCard }
+const nodeTypes = { chip: GraphNodeChip }
 
 /** The set of node ids to keep at full opacity when focused on `focusNode` - follows the
  * natural Person -> Topic -> Document cascade rather than a plain undirected BFS, so
@@ -103,6 +121,7 @@ function buildLayout(
   const visibleNodes = graph.nodes.filter((n) => visibleTypes.has(n.type))
   const visibleIds = new Set(visibleNodes.map((n) => n.id))
   const visibleGraphEdges = graph.edges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
+  const typeById = new Map(visibleNodes.map((n) => [n.id, n.type]))
 
   const normalizedQuery = query.trim().toLowerCase()
   const searchMatchedIds = normalizedQuery
@@ -122,25 +141,51 @@ function buildLayout(
   const nodes: Node<CardData>[] = NODE_TYPES.flatMap((type) =>
     grouped[type].map((n, i) => ({
       id: n.id,
-      type: 'card',
+      type: 'chip',
       position: { x: COLUMN_X[type], y: i * ROW_HEIGHT },
-      data: { label: n.label, subtitle: n.subtitle, type: n.type, dimmed: anyActive && !activeSet!.has(n.id) },
+      data: {
+        label: n.label,
+        subtitle: n.subtitle,
+        type: n.type,
+        dimmed: anyActive && !activeSet!.has(n.id),
+        active: focusNode?.id === n.id,
+      },
     })),
   )
 
-  const edges: Edge[] = visibleGraphEdges.map((e, i) => ({
-    id: `e${i}`,
-    source: e.source,
-    target: e.target,
-    style: {
-      strokeWidth: Math.max(1, e.weight * 3),
-      stroke: '#cbd5e1',
-      opacity: anyActive && !(activeSet!.has(e.source) && activeSet!.has(e.target)) ? 0.15 : 1,
-      transition: 'opacity 300ms',
-    },
-  }))
+  const edges: Edge[] = visibleGraphEdges.map((e, i) => {
+    const targetType = typeById.get(e.target) ?? 'topic'
+    return {
+      id: `e${i}`,
+      source: e.source,
+      target: e.target,
+      style: {
+        strokeWidth: Math.max(1.5, e.weight * 3),
+        stroke: TYPE_STYLES[targetType].edge,
+        opacity: anyActive && !(activeSet!.has(e.source) && activeSet!.has(e.target)) ? 0.12 : 0.9,
+        transition: 'opacity 300ms, stroke 300ms',
+      },
+    }
+  })
 
   return { nodes, edges }
+}
+
+function TypeToggle({ type, active, onClick }: { type: GraphNodeType; active: boolean; onClick: () => void }) {
+  const style = TYPE_STYLES[type]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={active ? `Hide ${TYPE_LABELS[type]}` : `Show ${TYPE_LABELS[type]}`}
+      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+        active ? style.chip : 'text-gray-400 hover:bg-gray-100'
+      }`}
+    >
+      <span className={`h-2 w-2 rounded-full ${active ? style.dot : 'bg-gray-300'}`} />
+      {TYPE_LABELS[type]}
+    </button>
+  )
 }
 
 export function GraphPage() {
@@ -183,91 +228,91 @@ export function GraphPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-[calc(100vh-180px)] min-h-[560px] flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link to={`/teams/${teamId}`} className="knp-link mb-1 inline-block text-sm">
             ← Back to team
           </Link>
           <h1 className="knp-page-title">Knowledge graph</h1>
-          <p className="knp-page-subtitle">
-            {NODE_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => toggleType(type)}
-                className={`mr-3 inline-flex items-center transition-opacity ${
-                  visibleTypes.has(type) ? 'opacity-100' : 'opacity-40'
-                }`}
-                title={visibleTypes.has(type) ? `Hide ${TYPE_LABELS[type]}` : `Show ${TYPE_LABELS[type]}`}
-              >
-                <span className={`mr-1 inline-block h-2 w-2 rounded-full ${TYPE_STYLES[type].dot}`} />
-                {TYPE_LABELS[type]}
-              </button>
-            ))}
-          </p>
         </div>
-        <input
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setSelected(null)
-          }}
-          placeholder="Search the graph…"
-          className="knp-input w-64"
-        />
       </div>
 
       {graph.nodes.length === 0 ? (
         <p className="text-sm text-gray-500">No documented knowledge yet — upload documents to build the graph.</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-          <div className="h-[560px] overflow-hidden knp-card">
-            <ReactFlowProvider>
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                onNodeClick={(_, node) => {
-                  setQuery('')
-                  setSelected((prev) => (prev?.id === node.id ? null : graph.nodes.find((n) => n.id === node.id) ?? null))
+        <div className="relative flex-1 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <ReactFlowProvider>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              onNodeClick={(_, node) => {
+                setQuery('')
+                setSelected((prev) => (prev?.id === node.id ? null : graph.nodes.find((n) => n.id === node.id) ?? null))
+              }}
+              onPaneClick={() => setSelected(null)}
+              fitView
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background gap={20} size={1.5} color="#f6e9eb" />
+              <Controls style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 16px rgba(17,17,17,0.08)' }} />
+              <MiniMap
+                pannable
+                zoomable
+                maskColor="rgba(248,250,252,0.7)"
+                style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 16px rgba(17,17,17,0.08)' }}
+                nodeColor={(n) => {
+                  const type = (n.data as CardData | undefined)?.type
+                  return type ? TYPE_STYLES[type].edge : '#e2e8f0'
                 }}
-                onPaneClick={() => setSelected(null)}
-                fitView
-                proOptions={{ hideAttribution: true }}
-              >
-                <Background gap={16} color="#e5e7eb" />
-                <Controls />
-                <MiniMap pannable zoomable nodeColor={() => '#fecaca'} />
-              </ReactFlow>
-            </ReactFlowProvider>
+              />
+            </ReactFlow>
+          </ReactFlowProvider>
+
+          <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white/90 p-2 shadow-md backdrop-blur">
+            <div className="pointer-events-auto flex flex-wrap gap-1">
+              {NODE_TYPES.map((type) => (
+                <TypeToggle key={type} type={type} active={visibleTypes.has(type)} onClick={() => toggleType(type)} />
+              ))}
+            </div>
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setSelected(null)
+              }}
+              placeholder="Search the graph…"
+              className="knp-input pointer-events-auto w-60 border-gray-200 bg-white"
+            />
           </div>
 
-          <div className="knp-card p-4">
-            {selected ? (
-              <div className="space-y-2">
+          {selected ? (
+            <div className="absolute right-4 top-20 z-10 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+              <div className={`h-1.5 w-full ${TYPE_STYLES[selected.type].solid}`} />
+              <div className="space-y-2 p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="knp-section-title">{selected.type}</p>
+                  <span className={`knp-badge ${TYPE_STYLES[selected.type].chip}`}>{TYPE_LABELS[selected.type]}</span>
                   <button type="button" onClick={() => setSelected(null)} className="knp-link text-xs">
                     Clear focus
                   </button>
                 </div>
-                <p className="font-medium text-gray-900">{selected.label}</p>
+                <p className="font-semibold text-gray-900">{selected.label}</p>
                 {selected.subtitle && <p className="text-sm text-gray-500">{selected.subtitle}</p>}
                 <p className="text-xs text-gray-400">Directly connected nodes stay highlighted; the rest fade.</p>
                 {selectedPersonId !== null && (
-                  <Link to={`/people/${selectedPersonId}`} className="knp-link inline-block text-sm">
+                  <Link to={`/people/${selectedPersonId}`} className="knp-btn-secondary mt-1 w-full text-xs">
                     View profile →
                   </Link>
                 )}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Click a node to focus on it and its direct connections. Search above to highlight matches. Click the
-                dots above the graph to show or hide People, Topics, or Documents.
-              </p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-xs rounded-xl border border-gray-200 bg-white/90 p-3 text-xs text-gray-500 shadow-sm backdrop-blur">
+              Click a node to focus on it and its direct connections. Search above to highlight matches. Toggle the
+              chips above to show or hide People, Topics, or Documents.
+            </div>
+          )}
         </div>
       )}
     </div>
